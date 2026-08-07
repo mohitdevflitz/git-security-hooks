@@ -1,0 +1,17 @@
+#!/bin/sh
+# WARNS after a merge or fast-forward pull. Can't block (git already
+# finished by the time this runs) but surfaces the problem immediately.
+# Portable: Windows (Git Bash), Linux, macOS.
+HOOKDIR="$(cd "$(dirname "$0")" && pwd)"
+[ -f "$HOOKDIR/scanner.exe" ] && SCANNER="$HOOKDIR/scanner.exe" || SCANNER="$HOOKDIR/scanner"
+
+"$SCANNER" -tree .
+if [ $? -ne 0 ]; then
+    echo ""
+    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+    echo "  WARNING: malware markers found in working tree after pull/merge"
+    echo "  Clean these files before committing or pushing anything."
+    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+fi
+
+exit 0

@@ -1,0 +1,28 @@
+#!/bin/sh
+# BLOCKS a push whose diff ADDS known malware markers.
+# Only added lines are checked, so cleanup pushes (which remove the
+# payload) are allowed through.
+# Portable: Windows (Git Bash), Linux, macOS.
+HOOKDIR="$(cd "$(dirname "$0")" && pwd)"
+[ -f "$HOOKDIR/scanner.exe" ] && SCANNER="$HOOKDIR/scanner.exe" || SCANNER="$HOOKDIR/scanner"
+
+blocked=0
+
+while read local_ref local_sha remote_ref remote_sha
+do
+    [ "$local_sha" = "0000000000000000000000000000000000000000" ] && continue
+
+    range="$remote_sha..$local_sha"
+    [ "$remote_sha" = "0000000000000000000000000000000000000000" ] && range="$local_sha"
+
+    git diff "$range" 2>/dev/null | "$SCANNER" -stdin
+    [ $? -ne 0 ] && blocked=1
+done
+
+if [ "$blocked" = "1" ]; then
+    echo ""
+    echo "BLOCKED: push contains known malware markers being added."
+    exit 1
+fi
+
+exit 0

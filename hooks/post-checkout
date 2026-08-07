@@ -1,0 +1,16 @@
+#!/bin/sh
+# WARNS after a checkout or clone. Warn-only for the same reason as post-merge.
+# Portable: Windows (Git Bash), Linux, macOS.
+HOOKDIR="$(cd "$(dirname "$0")" && pwd)"
+[ -f "$HOOKDIR/scanner.exe" ] && SCANNER="$HOOKDIR/scanner.exe" || SCANNER="$HOOKDIR/scanner"
+
+"$SCANNER" -tree .
+if [ $? -ne 0 ]; then
+    echo ""
+    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+    echo "  WARNING: malware markers found in working tree after checkout"
+    echo "  Clean these files before committing or pushing anything."
+    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+fi
+
+exit 0

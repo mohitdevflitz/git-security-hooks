@@ -1,0 +1,17 @@
+#!/bin/sh
+# BLOCKS a commit that stages known malware markers.
+# Portable: Windows (Git Bash), Linux, macOS.
+HOOKDIR="$(cd "$(dirname "$0")" && pwd)"
+[ -f "$HOOKDIR/scanner.exe" ] && SCANNER="$HOOKDIR/scanner.exe" || SCANNER="$HOOKDIR/scanner"
+
+staged=$(git diff --cached --name-only --diff-filter=ACM)
+[ -z "$staged" ] && exit 0
+
+"$SCANNER" -files $staged
+if [ $? -ne 0 ]; then
+    echo ""
+    echo "BLOCKED: commit contains known malware markers. Clean the file(s) above before committing."
+    exit 1
+fi
+
+exit 0
