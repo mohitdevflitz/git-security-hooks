@@ -57,7 +57,9 @@ else {
 }
 
 # --- Scan ------------------------------------------------------------------
-$logPath = Join-Path $root ("scan-log-" + (Get-Date -Format "yyyy-MM-dd_HH-mm-ss") + ".txt")
+$logDir = Join-Path $root "logs"
+New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+$logPath = Join-Path $logDir ("scan-log-" + (Get-Date -Format "yyyy-MM-dd_HH-mm-ss") + ".txt")
 $out = New-Object System.Collections.Generic.List[string]
 $matches = 0
 

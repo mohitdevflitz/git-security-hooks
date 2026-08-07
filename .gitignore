@@ -1,0 +1,17 @@
+# Build output
+scanner.exe
+scanner
+watcher-service.exe
+watcher-service
+
+# Runtime output - machine specific, never commit
+logs/
+scan-log-*.txt
+watch-log.txt
+
+# Generated at install time with machine-specific paths
+restore-if-missing.ps1
+restore-if-missing.sh
+
+# Go
+src/service/go.sum

@@ -58,7 +58,8 @@ else
     esac
 fi
 
-LOG="$ROOT/scan-log-$(date +%Y-%m-%d_%H-%M-%S).txt"
+mkdir -p "$ROOT/logs"
+LOG="$ROOT/logs/scan-log-$(date +%Y-%m-%d_%H-%M-%S).txt"
 
 {
     echo "===== Malware Scan ====="

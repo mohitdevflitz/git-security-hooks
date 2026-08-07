@@ -28,9 +28,9 @@ var markerPatterns = []string{
 	`global\["!"\]\s*=`,
 	// The decoder immediately hijacks require() off global.
 	`global\[_\$_[0-9a-f]+\[0\]\]\s*=\s*require`,
-	// Shared tell across both variants: fromCharCode(127) used as a
-	// separator sentinel inside the string-shuffling decoder.
-	`String\.fromCharCode\(127\)`,
+	// REMOVED: `String\.fromCharCode\(127\)`. It is a real tell inside the
+	// decoder, but it is also present in ordinary minified bundles
+	// (html5-qrcode, zxing-js), so on its own it is noise rather than signal.
 }
 
 func compile() []*regexp.Regexp {
