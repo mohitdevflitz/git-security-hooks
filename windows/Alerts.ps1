@@ -214,10 +214,27 @@ if ($svcOK -and $hooksOK) {
 
 # --- detections ------------------------------------------------------------
 Get-Content -LiteralPath $Log -Wait -Tail 0 | ForEach-Object {
+
+    # Background watcher found an infected file
     if ($_ -match 'DETECTED:\s(.+)$') {
         $file = $Matches[1].Trim()
         Show-Toast -Title "Malware detected: $(Split-Path $file -Leaf)" `
                    -Line1 $file `
                    -Line2 'Original NOT modified - see logs\watch-log.txt' | Out-Null
+    }
+
+    # A git hook refused the operation. Hook output only reaches the terminal,
+    # so committing from an IDE would otherwise show nothing.
+    elseif ($_ -match 'GIT BLOCKED \((.+?)\):\s(.+)$') {
+        Show-Toast -Title "Git $($Matches[1]) BLOCKED" `
+                   -Line1 "Malware markers found in: $($Matches[2].Trim())" `
+                   -Line2 'Nothing was committed or pushed. Clean the file first.' | Out-Null
+    }
+
+    # Post-pull / checkout / rebase warning - too late to block
+    elseif ($_ -match 'GIT WARNING \((.+?)\):\s(.+)$') {
+        Show-Toast -Title "Malware arrived $($Matches[1])" `
+                   -Line1 $Matches[2].Trim() `
+                   -Line2 'Already on disk. Clean it before building or running.' | Out-Null
     }
 }

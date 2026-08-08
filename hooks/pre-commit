@@ -11,6 +11,14 @@ staged=$(git diff --cached --name-only --diff-filter=ACM)
 if [ $? -ne 0 ]; then
     echo ""
     echo "BLOCKED: commit contains known malware markers. Clean the file(s) above before committing."
+
+    # Also record it where the desktop alerter can see it. Hook output only
+    # appears in the terminal, which is invisible when committing from an IDE.
+    LOGDIR="$(dirname "$HOOKDIR")/logs"
+    mkdir -p "$LOGDIR" 2>/dev/null
+    printf '%s  GIT BLOCKED (commit): %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$(pwd)" \
+        >> "$LOGDIR/watch-log.txt" 2>/dev/null
+
     exit 1
 fi
 

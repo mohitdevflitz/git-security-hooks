@@ -12,6 +12,11 @@ if [ $? -ne 0 ]; then
     echo "  WARNING: malware markers found in working tree after pull/merge"
     echo "  Clean these files before committing or pushing anything."
     echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+
+    LOGDIR="$(dirname "$HOOKDIR")/logs"
+    mkdir -p "$LOGDIR" 2>/dev/null
+    printf '%s  GIT WARNING (after pull/merge): %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$(pwd)" \
+        >> "$LOGDIR/watch-log.txt" 2>/dev/null
 fi
 
 exit 0

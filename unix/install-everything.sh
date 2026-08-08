@@ -44,6 +44,7 @@ bad()  { echo "  FAILED: $2"; FAIL="$FAIL\n  $1 - $2"; }
 if [ "$UNINSTALL" = "1" ]; then
     echo "Removing everything..."
     "$UNIX/install-service.sh" --remove 2>/dev/null || true
+    sudo -u "$REAL_USER" "$UNIX/alerts.sh" --remove 2>/dev/null || true
     git config --global --unset core.hooksPath 2>/dev/null || true
     if [ "$OS" = "Linux" ]; then
         systemctl disable --now git-hooks-guard.timer 2>/dev/null || true
@@ -131,6 +132,12 @@ fi
 step "5/6  Real-time watcher service"
 "$UNIX/install-service.sh" --all --quarantine && ok "5/6 Watcher service" \
     || bad "5/6 Watcher service" "see errors above"
+
+# Notifications run as the logged-in user, not root - a root service has no
+# access to the desktop session.
+chmod +x "$UNIX/alerts.sh" 2>/dev/null
+sudo -u "$REAL_USER" "$UNIX/alerts.sh" --install 2>/dev/null \
+    || echo "  (desktop notifications could not be installed - run unix/alerts.sh --install yourself)"
 
 # --- 6. Self-test ----------------------------------------------------------
 step "6/6  Self-test"

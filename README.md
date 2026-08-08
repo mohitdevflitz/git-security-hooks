@@ -261,7 +261,9 @@ git-security-hooks/
 │   └── reported.tsv       hashes of what has been reported (stops repeats)
 │
 ├── windows/               Windows scripts (the menu uses these)
+│   └── Alerts.ps1             desktop toast notifications
 └── unix/                  Linux and Mac scripts
+    └── alerts.sh              desktop notifications
 ```
 
 You only ever touch `RUN-WINDOWS.bat`.
@@ -332,6 +334,13 @@ chmod +x RUN-LINUX-MAC.sh unix/*.sh
 ```
 
 **No USN journal** — real-time watching falls back to `fsnotify`, which is less reliable across whole drives.
+
+**Notifications** — `unix/alerts.sh` uses `notify-send` on Linux and `osascript` on macOS, started by a systemd user unit or a launchd agent. Untested. Likely first-run problems:
+- Linux: needs `libnotify-bin` (`sudo apt install libnotify-bin`) and a logind session for `systemctl --user`
+- macOS: the sending binary needs notification permission in System Settings
+- If the desktop path fails it prints the alert to the terminal instead, so nothing is lost silently
+
+Test it directly with `./unix/alerts.sh --test`.
 
 **Drive discovery** — "scan all" parses `df`, whose output varies. If it misses a drive, use the specific-folder option.
 

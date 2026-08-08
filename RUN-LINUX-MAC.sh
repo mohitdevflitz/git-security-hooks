@@ -170,6 +170,10 @@ self_test() {
 }
 
 # ===========================================================================
+# Make sure notifications are running. --ensure is a no-op if one is already
+# alive, so opening the menu can never leave two of them firing.
+[ -f "$UNIX/alerts.sh" ] && { chmod +x "$UNIX/alerts.sh" 2>/dev/null; "$UNIX/alerts.sh" --ensure >/dev/null 2>&1; }
+
 while true; do
     echo ""
     echo "=============================================="
@@ -180,12 +184,14 @@ while true; do
     echo "     hooks + service + self-test"
     echo "  2) Scan for malware"
     echo "  3) Real-time watcher service (install/start/stop/remove)"
-    echo "  4) Check status"
-    echo "  5) Test that blocking works"
-    echo "  6) Advanced (install without lockdown / re-harden)"
-    echo "  7) Exit"
+    echo "  4) Desktop notifications (start/stop/test)"
+    echo "  5) Check status"
+    echo "  6) Test that blocking works"
+    echo "  7) STOP / START all protection"
+    echo "  8) Advanced (install without lockdown / re-harden)"
+    echo "  9) Exit"
     echo ""
-    printf "Choose 1-7: "
+    printf "Choose 1-9: "
     read choice
 
     case "$choice" in
@@ -195,9 +201,69 @@ while true; do
             ;;
         2) do_scan ;;
         3) service_menu ;;
-        4) show_status ;;
-        5) self_test ;;
-        6)
+        4)
+            echo ""
+            echo "  a) Start / enable at login"
+            echo "  b) Send a test notification"
+            echo "  c) Status"
+            echo "  d) Stop and disable"
+            echo "  e) Back"
+            printf "Choose a-e: "
+            read ac
+            chmod +x "$UNIX/alerts.sh" 2>/dev/null
+            case "$ac" in
+                a|A) "$UNIX/alerts.sh" --install ;;
+                b|B) "$UNIX/alerts.sh" --test ;;
+                c|C) "$UNIX/alerts.sh" --status ;;
+                d|D) "$UNIX/alerts.sh" --remove ;;
+                *) ;;
+            esac
+            ;;
+        5) show_status ;;
+        6) self_test ;;
+        7)
+            echo ""
+            echo "  a) STOP everything   (pause protection - keeps it installed)"
+            echo "  b) START everything  (resume)"
+            echo "  c) Back"
+            printf "Choose a-c: "
+            read sc
+            chmod +x "$UNIX/alerts.sh" 2>/dev/null
+            case "$sc" in
+                a|A)
+                    echo "Stopping watcher service..."
+                    sudo "$UNIX/install-service.sh" --stop 2>/dev/null || \
+                        sudo systemctl stop git-security-watcher 2>/dev/null
+                    echo "Stopping desktop notifications..."
+                    "$UNIX/alerts.sh" --remove
+                    echo "Disabling git commit/push blocking..."
+                    git config --global --unset core.hooksPath 2>/dev/null
+                    echo ""
+                    echo "  ALL PROTECTION STOPPED. Nothing was uninstalled."
+                    show_status
+                    ;;
+                b|B)
+                    echo "Starting watcher service..."
+                    sudo "$UNIX/install-service.sh" --start 2>/dev/null || \
+                        sudo systemctl start git-security-watcher 2>/dev/null
+                    echo "Re-enabling git commit/push blocking..."
+                    # Guard against writing an empty value - that silently
+                    # disables hooks while looking like it worked.
+                    if [ -f "$ROOT/hooks/pre-commit" ]; then
+                        git config --global core.hooksPath "$ROOT/hooks"
+                    else
+                        echo "  hooks folder missing - NOT setting hooksPath"
+                    fi
+                    echo "Starting desktop notifications..."
+                    "$UNIX/alerts.sh" --ensure
+                    echo ""
+                    echo "  ALL PROTECTION RUNNING."
+                    show_status
+                    ;;
+                *) ;;
+            esac
+            ;;
+        8)
             echo ""
             echo "  a) Install only (no lockdown)"
             echo "  b) Harden only"
@@ -210,7 +276,7 @@ while true; do
                 *) ;;
             esac
             ;;
-        7) echo "Done."; exit 0 ;;
-        *) echo "Pick 1-7." ;;
+        9) echo "Done."; exit 0 ;;
+        *) echo "Pick 1-9." ;;
     esac
 done

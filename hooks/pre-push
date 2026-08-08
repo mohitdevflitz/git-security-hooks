@@ -22,6 +22,12 @@ done
 if [ "$blocked" = "1" ]; then
     echo ""
     echo "BLOCKED: push contains known malware markers being added."
+
+    LOGDIR="$(dirname "$HOOKDIR")/logs"
+    mkdir -p "$LOGDIR" 2>/dev/null
+    printf '%s  GIT BLOCKED (push): %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$(pwd)" \
+        >> "$LOGDIR/watch-log.txt" 2>/dev/null
+
     exit 1
 fi
 
