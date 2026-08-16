@@ -1,5 +1,22 @@
 # Git Security Hooks — Malware Guard
 
+> ### ⚠️ Current state: real-time watcher is DISABLED
+>
+> The background watcher (`GitSecurityWatcher` service / `GitSecurityHooksWatcher`
+> task) is deliberately commented out. Only the **git side** runs at startup:
+> the hooks that block commit/merge/push, plus the `GitSecurityHooksGuard`
+> task that restores them and re-applies `core.hooksPath` at boot, at logon
+> and every 15 minutes. Desktop notifications stay on, and still toast when a
+> hook blocks something.
+>
+> To switch the watcher off on a machine where it is already installed:
+> ```powershell
+> .\windows\Disable-Watcher.ps1          # run as Administrator
+> ```
+> To bring it back: `.\windows\Disable-Watcher.ps1 -Enable`, and un-comment
+> step 5 in `windows\Install-Everything.ps1` and the watcher cases in
+> `windows\Menu.ps1`.
+
 ## What is this?
 
 There is a malware that hides code inside your project files (like `tailwind.config.js` or `postcss.config.mjs`). It appends a very long line at the end of the file, pushed off-screen behind hundreds of spaces so you do not notice it. Then when you commit and push, that bad code goes to GitHub without you knowing.
