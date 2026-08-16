@@ -7,6 +7,24 @@ HOOKDIR="$(cd "$(dirname "$0")" && pwd)"
 staged=$(git diff --cached --name-only --diff-filter=ACM)
 [ -z "$staged" ] && exit 0
 
+# Skip this project's OWN repository.
+#
+# scanner.go and the hooks contain the malware signatures by design - that is
+# the whole point of them. `scanner.exe -tree` already excludes the install
+# folder, but `-files` does not, so committing changes to this project blocked
+# itself. Detect "am I scanning my own repo?" by comparing the repo root with
+# the install root (the parent of hooks/).
+INSTALL_ROOT="$(cd "$HOOKDIR/.." && pwd)"
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
+if [ -n "$REPO_ROOT" ]; then
+    a=$(printf '%s' "$INSTALL_ROOT" | tr 'A-Z' 'a-z')
+    b=$(printf '%s' "$REPO_ROOT"    | tr 'A-Z' 'a-z')
+    if [ "$a" = "$b" ]; then
+        echo "git-security-hooks' own repo - skipping self-scan."
+        exit 0
+    fi
+fi
+
 "$SCANNER" -files $staged
 if [ $? -ne 0 ]; then
     echo ""

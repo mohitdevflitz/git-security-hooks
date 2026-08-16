@@ -1,0 +1,89 @@
+#!/bin/sh
+# Runs on EVERY ref update - fetch, pull (merge OR rebase), reset, commit.
+#
+# WHY THIS SCANS COMMITTED CONTENT, NOT THE WORKING TREE
+# ------------------------------------------------------
+# The first version of this hook ran the scanner over the working tree. That
+# was useless for the case it was written for: during `git fetch`, the new
+# objects are in .git but the working tree still holds the OLD, clean files.
+# The scan found nothing, then the merge wrote the payload to disk with no
+# hook running at all (post-merge does NOT run when a merge hits a conflict,
+# and post-rewrite does NOT run when a rebase stops at a conflict).
+#
+# So instead we grep the INCOMING COMMIT via `git grep <rev>`, which reads
+# blobs straight out of the object database. That fires the moment the bad
+# content reaches this machine - before any merge, rebase or checkout can
+# put it on disk, and regardless of whether those operations later conflict.
+#
+# Still warn-only: the objects are already fetched by the time we see them.
+# But you find out immediately, and BEFORE you build or run anything.
+#
+# Portable: Windows (Git Bash), Linux, macOS.
+
+state="$1"
+[ "$state" = "committed" ] || exit 0
+
+HOOKDIR="$(cd "$(dirname "$0")" && pwd)"
+
+git rev-parse --is-inside-work-tree >/dev/null 2>&1 || exit 0
+TOP="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+
+ZERO="0000000000000000000000000000000000000000"
+
+# Malware markers. Keep in sync with src/scanner.go. Single-quoted so the
+# shell does not mangle the regex.
+PATTERN='global\.i="A10|ETH_RPC_URL|eth\.blockscout\.com/api|x-payload-b64|global\._t_s|global\._t_u|global\[.!.\][[:space:]]*=|_unins\.tmp'
+
+FOUND=""
+
+# stdin: <old-value> <new-value> <ref-name>, one per line.
+while read -r old new ref; do
+    [ -z "$new" ] && continue
+    [ "$new" = "$ZERO" ] && continue          # ref deleted
+    case "$ref" in
+        refs/stash|*NOTES*) continue ;;
+    esac
+
+    # Only look at what is NEW to us. If the old value is a real commit we
+    # diff-limit to it; a whole-history grep on every fetch would be slow.
+    if [ "$old" != "$ZERO" ] && git cat-file -e "$old" 2>/dev/null; then
+        RANGE="$new --not $old"
+    else
+        RANGE="$new"
+    fi
+
+    # -l lists matching FILES only. The payload is one enormous single line;
+    # printing it (git grep -n) floods the terminal and the shell mangles it
+    # into garbage. The file name is what you actually need.
+    HITS=$(git grep -I -l -E "$PATTERN" $RANGE -- \
+            '*.js' '*.mjs' '*.cjs' '*.ts' '*.tsx' '*.jsx' '*.mts' '*.cts' '*.json' '*.vue' '*.svelte' \
+            2>/dev/null | grep -v ':node_modules/' | head -20 | sed 's/^/    /')
+
+    if [ -n "$HITS" ]; then
+        FOUND="$FOUND
+--- $ref ---
+$HITS"
+    fi
+done
+
+if [ -n "$FOUND" ]; then
+    echo ""
+    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+    echo "  MALWARE MARKERS IN INCOMING COMMITS"
+    echo ""
+    echo "$FOUND"
+    echo ""
+    echo "  This content is in the objects you just fetched. It is NOT yet"
+    echo "  on disk unless you have already merged or checked out."
+    echo ""
+    echo "  DO NOT merge, build or run until the remote is cleaned."
+    echo "  To back out safely:   git merge --abort   /   git rebase --abort"
+    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+
+    LOGDIR="$(dirname "$HOOKDIR")/logs"
+    mkdir -p "$LOGDIR" 2>/dev/null
+    printf '%s  GIT WARNING (incoming commits): %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$TOP" \
+        >> "$LOGDIR/watch-log.txt" 2>/dev/null
+fi
+
+exit 0

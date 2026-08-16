@@ -11,6 +11,13 @@ if [ $? -ne 0 ]; then
     echo "  WARNING: malware markers found in working tree after rebase/amend"
     echo "  Clean these files before committing or pushing anything."
     echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+
+    # post-merge always logged; this hook never did, so a detection after a
+    # rebase produced no desktop toast at all.
+    LOGDIR="$(dirname "$HOOKDIR")/logs"
+    mkdir -p "$LOGDIR" 2>/dev/null
+    printf '%s  GIT WARNING (after rebase/amend): %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$(pwd)" \
+        >> "$LOGDIR/watch-log.txt" 2>/dev/null
 fi
 
 exit 0

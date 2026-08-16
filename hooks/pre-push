@@ -6,6 +6,20 @@
 HOOKDIR="$(cd "$(dirname "$0")" && pwd)"
 [ -f "$HOOKDIR/scanner.exe" ] && SCANNER="$HOOKDIR/scanner.exe" || SCANNER="$HOOKDIR/scanner"
 
+# Skip this project's OWN repository - same reason as pre-commit. The
+# signatures live in this repo by design, so scanning it blocks its own
+# pushes. Compare repo root against the install root (parent of hooks/).
+INSTALL_ROOT="$(cd "$HOOKDIR/.." && pwd)"
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
+if [ -n "$REPO_ROOT" ]; then
+    a=$(printf '%s' "$INSTALL_ROOT" | tr 'A-Z' 'a-z')
+    b=$(printf '%s' "$REPO_ROOT"    | tr 'A-Z' 'a-z')
+    if [ "$a" = "$b" ]; then
+        echo "git-security-hooks' own repo - skipping self-scan."
+        exit 0
+    fi
+fi
+
 blocked=0
 
 while read local_ref local_sha remote_ref remote_sha
